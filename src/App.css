@@ -1009,6 +1009,252 @@ tbody tr:hover {
   color: var(--muted);
 }
 
+/* —— Broadcast bar (timer / teaser / news / stream) —— */
+.broadcast {
+  margin: 16px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: linear-gradient(
+    145deg,
+    rgba(28, 16, 12, 0.95),
+    rgba(12, 10, 18, 0.92)
+  );
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.broadcast-top {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.9fr) minmax(200px, 1.2fr) minmax(180px, 1fr);
+  gap: 16px;
+  padding: 16px 18px;
+  align-items: center;
+}
+
+.broadcast-kicker {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.countdown-digits {
+  display: flex;
+  gap: 10px;
+}
+
+.countdown-digits div {
+  min-width: 56px;
+  padding: 8px 6px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(232, 197, 71, 0.28);
+  text-align: center;
+}
+
+.countdown-digits strong {
+  display: block;
+  font-family: var(--display);
+  font-size: 1.85rem;
+  letter-spacing: 0.04em;
+  color: var(--gold-soft);
+  line-height: 1;
+}
+
+.countdown-digits span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.countdown-live {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  letter-spacing: 0.06em;
+  color: var(--iris-red);
+}
+
+.episode-teaser .teaser-kind {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--iris-orange);
+  font-weight: 700;
+}
+
+.episode-teaser h2 {
+  margin: 4px 0 6px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.episode-teaser p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.broadcast-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.stream-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  color: #0a0810;
+  background: linear-gradient(135deg, #1e90ff, #7b2cbf 70%);
+  box-shadow: 0 8px 22px rgba(30, 144, 255, 0.28);
+}
+
+.stream-btn.ghost {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.stream-btn.games {
+  color: #1a1204;
+  background: linear-gradient(135deg, #e8c547, #ff6b35);
+}
+
+.stream-btn:hover {
+  filter: brightness(1.08);
+}
+
+.news-rail {
+  display: flex;
+  align-items: stretch;
+  border-top: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+.news-label {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #1a1204;
+  background: var(--gold);
+  z-index: 1;
+}
+
+.news-track {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  animation: news-marquee 42s linear infinite;
+  width: max-content;
+}
+
+.news-rail:hover .news-track {
+  animation-play-state: paused;
+}
+
+@keyframes news-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.news-chip {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 197, 71, 0.22);
+  background: rgba(20, 14, 12, 0.9);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.news-chip em {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--gold-soft);
+}
+
+.news-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1204;
+  background: var(--iris-teal);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.social-btn.stream {
+  color: #fff;
+  background: linear-gradient(135deg, #1e90ff, #7b2cbf);
+  border-color: transparent;
+}
+
+.social-btn.games-link {
+  color: #1a1204;
+  background: linear-gradient(135deg, #e8c547, #ff6b35);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.vote-col {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.vote-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #0a0810;
+  background: linear-gradient(135deg, #e8c547, #f5d76e);
+  border: 1px solid rgba(232, 197, 71, 0.6);
+}
+
+.vote-btn:hover {
+  filter: brightness(1.08);
+}
+
 .foot {
   margin-top: 8px;
   color: var(--muted);
@@ -1084,5 +1330,17 @@ tbody tr:hover {
 
   .toolbar-right {
     width: 100%;
+  }
+
+  .broadcast-top {
+    grid-template-columns: 1fr;
+  }
+
+  .broadcast-actions {
+    justify-content: stretch;
+  }
+
+  .broadcast-actions .stream-btn {
+    flex: 1 1 auto;
   }
 }

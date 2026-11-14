@@ -27,22 +27,93 @@ const hits = new Map();
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 20;
 
+/** Fan love/hate vibes — in-memory (resets on redeploy). */
+const vibes = { love: Object.create(null), hate: Object.create(null) };
+const vibeHits = new Map();
+const VIBE_RATE_MAX = 40;
+const ALLOWED_HANDLES = new Set([
+  "@arishfakhan138",
+  "@officialkanikamann",
+  "@aamrapali1101",
+  "@scoutop",
+  "@yung_dsa",
+  "@nakul_dhull",
+  "@mahhivij",
+  "@qazitouqeer_official",
+  "@mcmary.kom",
+  "@fun.with.gullu.g",
+  "@uditisinghh",
+  "@lovegillkalakaar",
+  "@isharikhi",
+  "@aasifkhan_1",
+  "@gandhi_aman_",
+  "@rohedkhan__",
+  "@rhititiwari",
+  "@abhinetamanishgoel",
+]);
+
 function clientIp(req) {
   const xf = req.headers["x-forwarded-for"];
   if (typeof xf === "string" && xf.length) return xf.split(",")[0].trim();
   return req.socket.remoteAddress || "unknown";
 }
 
-function allowProxy(ip) {
+function allowRate(map, ip, max) {
   const now = Date.now();
-  const row = hits.get(ip) || { count: 0, reset: now + RATE_WINDOW_MS };
+  const row = map.get(ip) || { count: 0, reset: now + RATE_WINDOW_MS };
   if (now > row.reset) {
     row.count = 0;
     row.reset = now + RATE_WINDOW_MS;
   }
   row.count += 1;
-  hits.set(ip, row);
-  return row.count <= RATE_MAX;
+  map.set(ip, row);
+  return row.count <= max;
+}
+
+function allowProxy(ip) {
+  return allowRate(hits, ip, RATE_MAX);
+}
+
+function json(res, status, body) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+async function readBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString("utf8");
+  if (!raw) return null;
+  return JSON.parse(raw);
+}
+
+async function handleVibes(req, res) {
+  if (req.method === "GET") {
+    json(res, 200, vibes);
+    return;
+  }
+  if (req.method === "POST") {
+    const ip = clientIp(req);
+    if (!allowRate(vibeHits, ip, VIBE_RATE_MAX)) {
+      json(res, 429, { error: "Too many vibes. Try again shortly." });
+      return;
+    }
+    try {
+      const body = await readBody(req);
+      const handle = typeof body?.handle === "string" ? body.handle.trim() : "";
+      const type = body?.type === "hate" ? "hate" : body?.type === "love" ? "love" : null;
+      if (!type || !handle || !ALLOWED_HANDLES.has(handle)) {
+        json(res, 400, { error: "Invalid vibe" });
+        return;
+      }
+      vibes[type][handle] = (vibes[type][handle] || 0) + 1;
+      json(res, 200, vibes);
+    } catch {
+      json(res, 400, { error: "Bad JSON" });
+    }
+    return;
+  }
+  json(res, 405, { error: "Method not allowed" });
 }
 
 async function proxyKoyro(req, res, path) {
@@ -121,6 +192,11 @@ const server = createServer(async (req, res) => {
   if (url.pathname.startsWith("/koyro/")) {
     const path = url.pathname.replace(/^\/koyro/, "") + url.search;
     await proxyKoyro(req, res, path);
+    return;
+  }
+
+  if (url.pathname === "/api/vibes") {
+    await handleVibes(req, res);
     return;
   }
 

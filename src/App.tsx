@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Bar,
   BarChart,
@@ -21,7 +22,8 @@ import {
   type Contestant,
 } from "./data";
 import { refreshFromKoyro } from "./koyro";
-import { SOCIAL, instagramProfileUrl } from "./links";
+import { SOCIAL, HOTSTAR, instagramProfileUrl } from "./links";
+import BroadcastBar from "./BroadcastBar";
 import "./App.css";
 
 type StatusFilter = "all" | "active" | "eliminated";
@@ -244,6 +246,8 @@ export default function App() {
         <div className="scanlines" />
       </div>
 
+      <BroadcastBar />
+
       <header className="hero">
         <div className="hero-brand">
           <img
@@ -276,6 +280,17 @@ export default function App() {
               </span>
               {refreshing ? "Refreshing…" : "Refresh live data"}
             </button>
+            <a
+              className="social-btn stream"
+              href={HOTSTAR.show}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ▶ Stream Hotstar
+            </a>
+            <Link className="social-btn games-link" to="/games">
+              🎮 Games Arena
+            </Link>
             <a
               className="social-btn ig"
               href={SOCIAL.instagram}
@@ -666,6 +681,7 @@ export default function App() {
                   Since entry{arrow("sinceEntry")}
                 </th>
                 <th className="num">Entry ~</th>
+                <th className="vote-col">Vote</th>
               </tr>
             </thead>
             <tbody>
@@ -727,6 +743,21 @@ export default function App() {
                       {fmt(r.sinceEntry)}
                     </td>
                     <td className="num muted">{fmtTotal(r.entry)}</td>
+                    <td className="vote-col">
+                      {r.status === "active" ? (
+                        <a
+                          className="vote-btn"
+                          href={HOTSTAR.vote}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={`Vote for ${r.name} on JioHotstar`}
+                        >
+                          Vote
+                        </a>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -741,6 +772,12 @@ export default function App() {
             {SOCIAL.instagramHandle}
           </a>
           <span aria-hidden="true">·</span>
+          <Link to="/games">BB Games Arena</Link>
+          <span aria-hidden="true">·</span>
+          <a href={HOTSTAR.show} target="_blank" rel="noopener noreferrer">
+            Stream on Hotstar
+          </a>
+          <span aria-hidden="true">·</span>
           <a
             href="https://koyro.in/shows/bigg-boss/season-20"
             target="_blank"
@@ -751,7 +788,8 @@ export default function App() {
         </div>
         <p>
           Fan board by Big Boss Gossip Verse · entry baselines from premiere /
-          5 Sept reports · not official Bigg Boss / Colors / JioHotstar stats
+          5 Sept reports · not official Bigg Boss / Colors / JioHotstar stats ·
+          vote only via official JioHotstar app
         </p>
       </footer>
     </div>
