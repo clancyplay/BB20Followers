@@ -271,33 +271,43 @@ export default function App() {
           <div className="hero-actions">
             <button
               type="button"
-              className={`refresh-btn ${refreshing ? "spinning" : ""}`}
+              className={`icon-btn refresh ${refreshing ? "spinning" : ""}`}
               onClick={onRefresh}
               disabled={refreshing}
+              title={refreshing ? "Refreshing…" : "Refresh live data"}
+              aria-label={refreshing ? "Refreshing…" : "Refresh live data"}
             >
               <span className="refresh-icon" aria-hidden="true">
                 ↻
               </span>
-              {refreshing ? "Refreshing…" : "Refresh live data"}
             </button>
             <a
-              className="social-btn stream"
+              className="icon-btn stream"
               href={HOTSTAR.show}
               target="_blank"
               rel="noopener noreferrer"
+              title="Stream on Hotstar"
+              aria-label="Stream on Hotstar"
             >
-              ▶ Stream Hotstar
+              ▶
             </a>
-            <Link className="social-btn games-link" to="/games">
-              🎮 Games Arena
+            <Link
+              className="icon-btn games"
+              to="/games"
+              title="BB Games Arena"
+              aria-label="BB Games Arena"
+            >
+              🎮
             </Link>
             <a
-              className="social-btn ig"
+              className="icon-btn ig"
               href={SOCIAL.instagram}
               target="_blank"
               rel="noopener noreferrer"
+              title={`Follow ${SOCIAL.instagramHandle}`}
+              aria-label={`Follow ${SOCIAL.instagramHandle}`}
             >
-              Follow {SOCIAL.instagramHandle}
+              IG
             </a>
             <span className="data-stamp">Updated · {updatedAt}</span>
             {refreshMsg ? <span className="refresh-msg">{refreshMsg}</span> : null}

@@ -55,31 +55,42 @@ export default function BroadcastBar() {
 
         <div className="broadcast-actions">
           <a
-            className="stream-btn"
+            className="icon-btn stream"
             href={HOTSTAR.show}
             target="_blank"
             rel="noopener noreferrer"
+            title="Stream on Hotstar"
+            aria-label="Stream on Hotstar"
           >
-            ▶ Stream on Hotstar
+            ▶
           </a>
           <a
-            className="stream-btn ghost"
+            className="icon-btn ghost"
             href={HOTSTAR.episodes}
             target="_blank"
             rel="noopener noreferrer"
+            title="Old episodes"
+            aria-label="Old episodes"
           >
-            Old episodes
+            ▤
           </a>
           <a
-            className="stream-btn ghost"
+            className="icon-btn ghost"
             href={HOTSTAR.vote}
             target="_blank"
             rel="noopener noreferrer"
+            title="Official vote on Hotstar"
+            aria-label="Official vote on Hotstar"
           >
-            Official vote
+            ✓
           </a>
-          <Link className="stream-btn games" to="/games">
-            🎮 BB Games Arena
+          <Link
+            className="icon-btn games"
+            to="/games"
+            title="BB Games Arena"
+            aria-label="BB Games Arena"
+          >
+            🎮
           </Link>
         </div>
       </div>
