@@ -11,10 +11,14 @@ import {
 } from "recharts";
 import {
   CONTESTANTS,
+  avatarUrl,
   fmt,
   fmtTotal,
   periodGain,
+  type Contestant,
 } from "./data";
+import { refreshFromKoyro } from "./koyro";
+import { SOCIAL } from "./links";
 import "./App.css";
 
 export type SortKey =
@@ -40,20 +44,33 @@ function gainClass(n: number): string {
   return "flat";
 }
 
+type Row = Contestant & {
+  today: number;
+  week: number;
+  month: number;
+  sinceEntry: number;
+};
+
+function buildRows(list: Contestant[]): Row[] {
+  return list.map((c) => {
+    const today = periodGain(c.followers, c.pct24);
+    const week = periodGain(c.followers, c.pct7);
+    const month = periodGain(c.followers, c.pct30);
+    const sinceEntry = Math.round(c.followers - c.entry);
+    return { ...c, today, week, month, sinceEntry };
+  });
+}
+
 export default function App() {
+  const [contestants, setContestants] = useState(CONTESTANTS);
   const [sortKey, setSortKey] = useState<SortKey>("week");
   const [asc, setAsc] = useState(false);
   const [query, setQuery] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState("13 Nov 2026");
+  const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
-  const rows = useMemo(() => {
-    return CONTESTANTS.map((c) => {
-      const today = periodGain(c.followers, c.pct24);
-      const week = periodGain(c.followers, c.pct7);
-      const month = periodGain(c.followers, c.pct30);
-      const sinceEntry = Math.round(c.followers - c.entry);
-      return { ...c, today, week, month, sinceEntry };
-    });
-  }, []);
+  const rows = useMemo(() => buildRows(contestants), [contestants]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -106,36 +123,105 @@ export default function App() {
     return asc ? " ↑" : " ↓";
   }
 
+  async function onRefresh() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setRefreshMsg(null);
+    try {
+      const result = await refreshFromKoyro();
+      setContestants(result.contestants);
+      setUpdatedAt(result.updatedAt);
+      setRefreshMsg(`Synced ${result.contestants.length} housemates`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Refresh failed";
+      setRefreshMsg(msg);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <div className="page">
+      <div className="atmosphere" aria-hidden="true">
+        <div className="orb orb-a" />
+        <div className="orb orb-b" />
+        <div className="orb orb-c" />
+        <div className="scanlines" />
+      </div>
+
       <header className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Bigg Boss Hindi · Season 20</p>
-          <h1>Instagram Follower Board</h1>
-          <p className="sub">
-            18 housemates · sort by today / week / since entry · data ~13–14 Nov
-            2026 (KOYRO)
-          </p>
+        <div className="hero-brand">
+          <img
+            className="hero-logo"
+            src="/bb20/logo.jpg"
+            alt="Bigg Boss 20"
+          />
+          <img className="hero-eye" src="/bb20/eye.svg" alt="" />
         </div>
-        <div className="stats">
-          <div className="stat">
-            <strong>{fmtTotal(totalFollowers)}</strong>
-            <span>Combined reach</span>
-          </div>
-          <div className="stat">
-            <strong className="pos">{fmt(topWeek.week)}</strong>
-            <span>7d · {topWeek.name.split(" ")[0]}</span>
-          </div>
-          <div className="stat">
-            <strong className="pos">{fmt(topToday.today)}</strong>
-            <span>Today · {topToday.name.split(" ")[0]}</span>
-          </div>
-          <div className="stat">
-            <strong className="pos">{fmt(topSince.sinceEntry)}</strong>
-            <span>Since entry · {topSince.name.split(" ")[0]}</span>
+        <div className="hero-copy">
+          <p className="eyebrow">
+            <span className="live-dot" /> Colors TV · JioHotstar · Season 20
+          </p>
+          <h1>
+            <span className="brand-line">BIGG BOSS 20</span>
+            <span className="title-line">Instagram Follower Board</span>
+          </h1>
+          <p className="sub">
+            18 housemates · Tathas-two · live social scoreboard from KOYRO
+            snapshots
+          </p>
+          <div className="hero-actions">
+            <button
+              type="button"
+              className={`refresh-btn ${refreshing ? "spinning" : ""}`}
+              onClick={onRefresh}
+              disabled={refreshing}
+            >
+              <span className="refresh-icon" aria-hidden="true">
+                ↻
+              </span>
+              {refreshing ? "Refreshing…" : "Refresh live data"}
+            </button>
+            <a
+              className="social-btn ig"
+              href={SOCIAL.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Instagram · {SOCIAL.instagramHandle}
+            </a>
+            <a
+              className="social-btn gh"
+              href={SOCIAL.github}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHub
+            </a>
+            <span className="data-stamp">Updated · {updatedAt}</span>
+            {refreshMsg ? <span className="refresh-msg">{refreshMsg}</span> : null}
           </div>
         </div>
       </header>
+
+      <section className="stats" aria-label="Season highlights">
+        <div className="stat">
+          <strong>{fmtTotal(totalFollowers)}</strong>
+          <span>Combined reach</span>
+        </div>
+        <div className="stat">
+          <strong className="pos">{fmt(topWeek.week)}</strong>
+          <span>7d · {topWeek.name.split(" ")[0]}</span>
+        </div>
+        <div className="stat">
+          <strong className="pos">{fmt(topToday.today)}</strong>
+          <span>Today · {topToday.name.split(" ")[0]}</span>
+        </div>
+        <div className="stat">
+          <strong className="pos">{fmt(topSince.sinceEntry)}</strong>
+          <span>Since entry · {topSince.name.split(" ")[0]}</span>
+        </div>
+      </section>
 
       <section className="toolbar">
         <div className="pills">
@@ -168,8 +254,8 @@ export default function App() {
         />
       </section>
 
-      <section className="chart-card">
-        <div className="card-head">
+      <section className="chart-panel">
+        <div className="panel-head">
           <h2>
             Top {Math.min(10, filtered.length)} ·{" "}
             {SORT_OPTIONS.find((o) => o.key === chartMetric)?.label}
@@ -183,10 +269,14 @@ export default function App() {
               layout="vertical"
               margin={{ top: 8, right: 24, left: 8, bottom: 8 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" horizontal={false} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="rgba(232,197,71,0.12)"
+                horizontal={false}
+              />
               <XAxis
                 type="number"
-                tick={{ fill: "#9a9a9a", fontSize: 12 }}
+                tick={{ fill: "#b8a878", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `${v}K`}
@@ -195,16 +285,16 @@ export default function App() {
                 type="category"
                 dataKey="name"
                 width={78}
-                tick={{ fill: "#d0d0d0", fontSize: 12 }}
+                tick={{ fill: "#f3e9c8", fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                cursor={{ fill: "rgba(245,215,110,0.06)" }}
                 contentStyle={{
-                  background: "#161616",
-                  border: "1px solid #333",
-                  borderRadius: 8,
+                  background: "#120e08",
+                  border: "1px solid rgba(232,197,71,0.35)",
+                  borderRadius: 10,
                 }}
                 labelStyle={{ color: "#fff" }}
                 formatter={(value) => [
@@ -216,7 +306,7 @@ export default function App() {
                 {chartData.map((d, i) => (
                   <Cell
                     key={i}
-                    fill={d.raw >= 0 ? "#3dd68c" : "#f07178"}
+                    fill={d.raw >= 0 ? "#2EC4B6" : "#E63946"}
                   />
                 ))}
               </Bar>
@@ -225,7 +315,7 @@ export default function App() {
         </div>
       </section>
 
-      <section className="table-card">
+      <section className="table-panel">
         <div className="table-scroll">
           <table>
             <thead>
@@ -274,8 +364,16 @@ export default function App() {
                   <td className="muted">{i + 1}</td>
                   <td>
                     <div className="name-cell">
-                      <span className="name">{r.name}</span>
-                      {r.note ? <span className="note">{r.note}</span> : null}
+                      <img
+                        className="avatar"
+                        src={avatarUrl(r.avatarId)}
+                        alt=""
+                        loading="lazy"
+                      />
+                      <div className="name-meta">
+                        <span className="name">{r.name}</span>
+                        {r.note ? <span className="note">{r.note}</span> : null}
+                      </div>
                     </div>
                   </td>
                   <td className="handle">{r.handle}</td>
@@ -295,8 +393,27 @@ export default function App() {
       </section>
 
       <footer className="foot">
-        Source: koyro.in snapshots · Entry baselines from premiere / wildcard
-        reports · Not official Bigg Boss stats · Project: BB20Followers
+        <div className="foot-links">
+          <a href={SOCIAL.instagram} target="_blank" rel="noopener noreferrer">
+            {SOCIAL.instagramHandle}
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href={SOCIAL.github} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+          <span aria-hidden="true">·</span>
+          <a
+            href="https://koyro.in/shows/bigg-boss/season-20"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            KOYRO data
+          </a>
+        </div>
+        <p>
+          Fan board by Big Boss Gossip Verse · entry baselines from premiere /
+          5 Sept reports · not official Bigg Boss / Colors / JioHotstar stats
+        </p>
       </footer>
     </div>
   );

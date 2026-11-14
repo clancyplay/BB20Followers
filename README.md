@@ -1,24 +1,46 @@
 # BB20Followers
 
-Bigg Boss Hindi Season 20 Instagram follower board — sortable web app.
+Bigg Boss Hindi Season 20 Instagram follower board — sortable web app with BB20 branding and live KOYRO refresh.
 
-## Run
+Built for [**@bigbossgossipverse**](https://www.instagram.com/bigbossgossipverse/).
+
+## Run locally
 
 ```bash
-cd /Users/anuragkumar/Desktop/All/Work/BB20Followers
 npm install
 npm run dev
 ```
 
 Open the URL Vite prints (usually `http://localhost:5173`).
 
+Production-style (static + KOYRO proxy):
+
+```bash
+npm run build
+npm start
+```
+
 ## Features
 
-- Sort by today / this week / 30 days / since entry / total / name
+- Sort by today / week / 30 days / since entry / total / name
 - Search by contestant name or Instagram handle
-- Click table headers to sort; toggle ascending/descending
-- Bar chart updates with the active sort metric
+- **Refresh live data** — pulls latest KOYRO season snapshot
+- Contestant avatars, BB20 logo / eye motif, gold + multicolor iris theme
+- Links to Instagram + GitHub
+
+## Deploy (Railway)
+
+No database needed. One Node service serves the SPA and proxies `/koyro/*` to KOYRO (rate-limited).
+
+```bash
+railway init -n BB20Followers
+railway up
+railway domain
+```
 
 ## Data
 
-Snapshot data from KOYRO (~13–14 Nov 2026). Entry baselines are approximate from premiere / wildcard reports. Update `src/data.ts` for fresh numbers.
+- Live counts / % from [KOYRO](https://koyro.in/shows/bigg-boss/season-20)
+- Entry baselines from premiere / wildcard reports
+- **Amrapali entry = 6.0M** (5 Sept report)
+- Fallbacks in `src/data.ts`
