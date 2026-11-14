@@ -41,7 +41,6 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 1.99,
     entry: 6_000_000,
     avatarId: "80635d97-8263-4b77-a2c6-e83cf99f19f6",
-    note: "Entry = 5 Sept (~6M)",
   },
   {
     name: "ScoutOP (Tanmay)",
