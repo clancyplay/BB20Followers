@@ -14,13 +14,17 @@ import {
   CONTESTANTS,
   avatarUrl,
   fmt,
+  fmtPct,
   fmtTotal,
   periodGain,
+  sinceEntryPct,
   type Contestant,
 } from "./data";
 import { refreshFromKoyro } from "./koyro";
 import { SOCIAL, instagramProfileUrl } from "./links";
 import "./App.css";
+
+type StatusFilter = "all" | "active" | "eliminated";
 
 export type SortKey =
   | "followers"
@@ -50,6 +54,7 @@ type Row = Contestant & {
   week: number;
   month: number;
   sinceEntry: number;
+  growthPct: number;
 };
 
 function buildRows(list: Contestant[]): Row[] {
@@ -58,8 +63,42 @@ function buildRows(list: Contestant[]): Row[] {
     const week = periodGain(c.followers, c.pct7);
     const month = periodGain(c.followers, c.pct30);
     const sinceEntry = Math.round(c.followers - c.entry);
-    return { ...c, today, week, month, sinceEntry };
+    const growthPct = sinceEntryPct(c.followers, c.entry);
+    return { ...c, today, week, month, sinceEntry, growthPct };
   });
+}
+
+function CategoryPerson({
+  row,
+  value,
+  sub,
+  tone = "neutral",
+}: {
+  row: Row;
+  value: string;
+  sub: string;
+  tone?: "pos" | "neg" | "neutral" | "out";
+}) {
+  return (
+    <a
+      className={`cat-person tone-${tone}`}
+      href={instagramProfileUrl(row.handle)}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img className="cat-avatar" src={avatarUrl(row.avatarId)} alt="" />
+      <div className="cat-copy">
+        <strong>
+          {row.name}
+          {row.status === "eliminated" ? (
+            <span className="out-chip">OUT</span>
+          ) : null}
+        </strong>
+        <span className="cat-value">{value}</span>
+        <span className="cat-sub">{sub}</span>
+      </div>
+    </a>
+  );
 }
 
 function metricValue(row: Row, key: Exclude<SortKey, "name">): number {
@@ -76,15 +115,32 @@ export default function App() {
   const [sortKey, setSortKey] = useState<SortKey>("week");
   const [asc, setAsc] = useState(false);
   const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState("13 Nov 2026");
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
   const rows = useMemo(() => buildRows(contestants), [contestants]);
+  const activeRows = useMemo(
+    () => rows.filter((r) => r.status === "active"),
+    [rows]
+  );
+  const eliminatedRows = useMemo(
+    () =>
+      [...rows.filter((r) => r.status === "eliminated")].sort((a, b) => {
+        const wa = Number(a.exitNote?.match(/Week\s+(\d+)/i)?.[1] ?? 99);
+        const wb = Number(b.exitNote?.match(/Week\s+(\d+)/i)?.[1] ?? 99);
+        return wa - wb;
+      }),
+    [rows]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = rows;
+    if (statusFilter !== "all") {
+      list = list.filter((r) => r.status === statusFilter);
+    }
     if (q) {
       list = list.filter(
         (r) =>
@@ -103,11 +159,9 @@ export default function App() {
       return asc ? av - bv : bv - av;
     });
     return copy;
-  }, [rows, sortKey, asc, query]);
+  }, [rows, sortKey, asc, query, statusFilter]);
 
-  const topToday = [...rows].sort((a, b) => b.today - a.today)[0];
-  const topWeek = [...rows].sort((a, b) => b.week - a.week)[0];
-  const topSince = [...rows].sort((a, b) => b.sinceEntry - a.sinceEntry)[0];
+  const topWeek = [...activeRows].sort((a, b) => b.week - a.week)[0];
   const totalFollowers = rows.reduce((s, r) => s + r.followers, 0);
   const weekNet = rows.reduce((s, r) => s + r.week, 0);
 
@@ -116,8 +170,34 @@ export default function App() {
   const metricLabel =
     SORT_OPTIONS.find((o) => o.key === chartMetric)?.label ?? "This week";
 
-  const podiumFirst = filtered[0] ?? null;
-  const podiumRest = filtered.slice(1, 3);
+  /** Podium race = still inside the house only */
+  const raceBoard = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let list = activeRows;
+    if (q) {
+      list = list.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.handle.toLowerCase().includes(q)
+      );
+    }
+    const key = sortKey === "name" ? "week" : sortKey;
+    const copy = [...list];
+    copy.sort((a, b) => (asc ? a[key] - b[key] : b[key] - a[key]));
+    return copy;
+  }, [activeRows, sortKey, asc, query]);
+
+  const podiumFirst = raceBoard[0] ?? null;
+  const podiumRest = raceBoard.slice(1, 3);
+
+  const hotStreak = [...activeRows].sort((a, b) => b.pct7 - a.pct7).slice(0, 3);
+  const underFire = [...activeRows].sort((a, b) => a.week - b.week).slice(0, 3);
+  const darkHorses = [...activeRows]
+    .sort((a, b) => b.growthPct - a.growthPct)
+    .slice(0, 3);
+  const megaReach = [...activeRows]
+    .sort((a, b) => b.followers - a.followers)
+    .slice(0, 3);
 
   const chartData = filtered.slice(0, 10).map((r) => ({
     name: r.name.split(" ")[0],
@@ -216,16 +296,19 @@ export default function App() {
           <span>Combined reach</span>
         </div>
         <div className="stat">
-          <strong className="pos">{fmt(topWeek.week)}</strong>
-          <span>7d · {topWeek.name.split(" ")[0]}</span>
+          <strong>
+            {activeRows.length}
+            <span className="stat-split">/{rows.length}</span>
+          </strong>
+          <span>Still inside</span>
         </div>
         <div className="stat">
-          <strong className="pos">{fmt(topToday.today)}</strong>
-          <span>Today · {topToday.name.split(" ")[0]}</span>
+          <strong className="pos">{fmt(topWeek?.week ?? 0)}</strong>
+          <span>7d · {topWeek?.name.split(" ")[0] ?? "—"}</span>
         </div>
         <div className="stat">
-          <strong className="pos">{fmt(topSince.sinceEntry)}</strong>
-          <span>Since entry · {topSince.name.split(" ")[0]}</span>
+          <strong className="neg">{eliminatedRows.length}</strong>
+          <span>Evicted / out</span>
         </div>
       </section>
 
@@ -252,12 +335,34 @@ export default function App() {
             {asc ? "Ascending" : "Descending"}
           </button>
         </div>
-        <input
-          className="search"
-          placeholder="Search name or @handle…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="toolbar-right">
+          <div className="status-filters" role="group" aria-label="House status">
+            {(
+              [
+                ["all", "All"],
+                ["active", "Inside"],
+                ["eliminated", "Evicted"],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={
+                  statusFilter === key ? "status-chip active" : "status-chip"
+                }
+                onClick={() => setStatusFilter(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <input
+            className="search"
+            placeholder="Search name or @handle…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
       </section>
 
       {podiumFirst ? (
@@ -304,7 +409,7 @@ export default function App() {
         <section className="podium-rest" aria-label="Runners up">
           <div className="podium-rest-head">
             <h2>Chasing the lead</h2>
-            <span className="muted">#2 & #3 · {metricLabel}</span>
+            <span className="muted">#2 & #3 inside · {metricLabel}</span>
           </div>
           <div className="podium-rest-grid">
             {podiumRest.map((r, idx) => (
@@ -336,6 +441,117 @@ export default function App() {
           </div>
         </section>
       ) : null}
+
+      <section className="category-grid" aria-label="Story categories">
+        <article className="category-card">
+          <header>
+            <h2>Hot streak</h2>
+            <span>Fastest % this week · inside</span>
+          </header>
+          <div className="category-list">
+            {hotStreak.map((r) => (
+              <CategoryPerson
+                key={r.handle}
+                row={r}
+                value={`${fmt(r.week)} · ${fmtPct(r.pct7)}`}
+                sub="7-day pace"
+                tone="pos"
+              />
+            ))}
+          </div>
+        </article>
+
+        <article className="category-card hate">
+          <header>
+            <h2>Under fire</h2>
+            <span>Worst net this week · hate / cooling</span>
+          </header>
+          <div className="category-list">
+            {underFire.map((r) => (
+              <CategoryPerson
+                key={r.handle}
+                row={r}
+                value={fmt(r.week)}
+                sub={`${fmtPct(r.pct7)} · 7 days`}
+                tone="neg"
+              />
+            ))}
+          </div>
+        </article>
+
+        <article className="category-card">
+          <header>
+            <h2>Dark horses</h2>
+            <span>Biggest % jump since entry</span>
+          </header>
+          <div className="category-list">
+            {darkHorses.map((r) => (
+              <CategoryPerson
+                key={r.handle}
+                row={r}
+                value={`${fmt(r.sinceEntry)} · ${fmtPct(r.growthPct)}`}
+                sub={`${fmtTotal(r.entry)} → ${fmtTotal(r.followers)}`}
+                tone="pos"
+              />
+            ))}
+          </div>
+        </article>
+
+        <article className="category-card">
+          <header>
+            <h2>Mega reach</h2>
+            <span>Most followed · still inside</span>
+          </header>
+          <div className="category-list">
+            {megaReach.map((r) => (
+              <CategoryPerson
+                key={r.handle}
+                row={r}
+                value={fmtTotal(r.followers)}
+                sub={`Week ${fmt(r.week)}`}
+                tone="neutral"
+              />
+            ))}
+          </div>
+        </article>
+      </section>
+
+      <section className="eliminated-panel" aria-label="Evicted contestants">
+        <div className="panel-head">
+          <h2>Out of the house</h2>
+          <span className="muted">
+            {eliminatedRows.length} gone · names + exit week
+          </span>
+        </div>
+        <div className="eliminated-grid">
+          {eliminatedRows.map((r) => (
+            <a
+              key={r.handle}
+              className="eliminated-card"
+              href={instagramProfileUrl(r.handle)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                className="cat-avatar"
+                src={avatarUrl(r.avatarId)}
+                alt=""
+                loading="lazy"
+              />
+              <div className="cat-copy">
+                <strong>
+                  {r.name}
+                  <span className="out-chip">OUT</span>
+                </strong>
+                <span className="cat-sub">{r.exitNote ?? "Evicted"}</span>
+                <span className={`cat-value ${gainClass(r.week)}`}>
+                  {fmtTotal(r.followers)} · week {fmt(r.week)}
+                </span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
 
       <section className="chart-panel">
         <div className="panel-head">
@@ -473,8 +689,15 @@ export default function App() {
                           loading="lazy"
                         />
                         <div className="name-meta">
-                          <span className="name">{r.name}</span>
-                          {r.note ? (
+                          <span className="name">
+                            {r.name}
+                            {r.status === "eliminated" ? (
+                              <span className="out-chip">OUT</span>
+                            ) : null}
+                          </span>
+                          {r.status === "eliminated" && r.exitNote ? (
+                            <span className="note">{r.exitNote}</span>
+                          ) : r.note ? (
                             <span className="note">{r.note}</span>
                           ) : null}
                         </div>

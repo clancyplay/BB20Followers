@@ -1,3 +1,5 @@
+export type ContestantStatus = "active" | "eliminated";
+
 export type Contestant = {
   name: string;
   handle: string;
@@ -7,6 +9,9 @@ export type Contestant = {
   pct30: number;
   entry: number;
   avatarId: string;
+  status: ContestantStatus;
+  /** e.g. "Week 2 · Evicted" */
+  exitNote?: string;
   note?: string;
 };
 
@@ -21,6 +26,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 2.14,
     entry: 29_100_000,
     avatarId: "34e2df4c-7fe5-4fc7-9e94-6d04a5254adc",
+    status: "active",
   },
   {
     name: "Kanika Mann",
@@ -31,6 +37,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 1.75,
     entry: 7_300_000,
     avatarId: "d4c3e6b4-185f-480d-b081-b10a84e43995",
+    status: "active",
   },
   {
     name: "Amrapali Dubey",
@@ -41,6 +48,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 1.99,
     entry: 6_000_000,
     avatarId: "80635d97-8263-4b77-a2c6-e83cf99f19f6",
+    status: "active",
   },
   {
     name: "ScoutOP (Tanmay)",
@@ -51,6 +59,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 7.63,
     entry: 4_400_000,
     avatarId: "4dff4fda-6782-4e5b-9b5f-62d504d3cf8d",
+    status: "active",
   },
   {
     name: "Yung DSA",
@@ -61,6 +70,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 48.92,
     entry: 120_000,
     avatarId: "06ea68d9-40d7-49d2-9f90-68c027f0af45",
+    status: "active",
   },
   {
     name: "Nakull Dhull",
@@ -71,7 +81,9 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 37.55,
     entry: 1_200_000,
     avatarId: "18b96210-4be9-4199-95b7-4d51fbb0a21b",
-    note: "Wildcard ~Oct",
+    status: "eliminated",
+    exitNote: "Week 6 · Removed (violence)",
+    note: "Wildcard",
   },
   {
     name: "Mahhi Vij",
@@ -82,6 +94,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 1.56,
     entry: 2_200_000,
     avatarId: "478eded1-5842-47dd-822c-1c65e96a4a58",
+    status: "active",
   },
   {
     name: "Qazi Touqeer",
@@ -92,6 +105,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 22.26,
     entry: 172_000,
     avatarId: "9ce14673-39bd-4298-83e4-7b4b77d159ac",
+    status: "active",
   },
   {
     name: "Mary Kom",
@@ -102,6 +116,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 0.82,
     entry: 2_000_000,
     avatarId: "761f15c6-117e-40de-97ff-98f039b2a76f",
+    status: "eliminated",
+    exitNote: "Week 7 · Evicted",
   },
   {
     name: "Gullu (Kushal)",
@@ -112,6 +128,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 17.09,
     entry: 1_400_000,
     avatarId: "7dd1ac26-1570-4818-a940-0f96c9ab55bc",
+    status: "active",
   },
   {
     name: "Uditi Singh",
@@ -122,6 +139,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 22.69,
     entry: 1_000_000,
     avatarId: "fb7e0234-c523-4b0d-b2a3-9b73a2e872a3",
+    status: "active",
   },
   {
     name: "Love Gill",
@@ -132,6 +150,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 24.22,
     entry: 613_000,
     avatarId: "a85ca3b3-602d-4d2b-818c-d1b12c82b382",
+    status: "active",
   },
   {
     name: "Isha Rikhi",
@@ -142,6 +161,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: -0.45,
     entry: 1_100_000,
     avatarId: "90f07122-129e-488a-ad28-f405c3d3c064",
+    status: "eliminated",
+    exitNote: "Week 3 · Evicted",
   },
   {
     name: "Aasif Khan",
@@ -152,6 +173,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 24.2,
     entry: 235_000,
     avatarId: "a729b57f-d560-45c4-ade3-e2e42683797a",
+    status: "eliminated",
+    exitNote: "Week 8 · Evicted",
   },
   {
     name: "Aman Gandhi",
@@ -162,6 +185,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 3.15,
     entry: 428_000,
     avatarId: "ebf1c0f9-6762-4058-98e4-2ca9bc309a0f",
+    status: "eliminated",
+    exitNote: "Week 6 · Evicted",
   },
   {
     name: "Rohed Khan",
@@ -172,6 +197,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 4.33,
     entry: 30_700,
     avatarId: "534b503d-7aa1-471d-8998-e7e8a14215de",
+    status: "eliminated",
+    exitNote: "Week 2 · Evicted",
   },
   {
     name: "Rhiti Tiwari",
@@ -182,6 +209,8 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 2.49,
     entry: 17_200,
     avatarId: "00246a99-89f1-498f-954d-337669ad2c06",
+    status: "eliminated",
+    exitNote: "Week 4 · Evicted",
   },
   {
     name: "Manish Goel",
@@ -192,6 +221,7 @@ export const CONTESTANTS: Contestant[] = [
     pct30: 288.58,
     entry: 24_000,
     avatarId: "d5fdecfb-d304-4e27-b0be-f3dc5a4d39fe",
+    status: "active",
     note: "Wildcard W6",
   },
 ];
@@ -204,6 +234,11 @@ export function periodGain(current: number, pct: number): number {
   if (pct === 0) return 0;
   const previous = current / (1 + pct / 100);
   return Math.round(current - previous);
+}
+
+export function sinceEntryPct(followers: number, entry: number): number {
+  if (!entry) return 0;
+  return ((followers - entry) / entry) * 100;
 }
 
 export function fmt(n: number): string {
@@ -224,4 +259,9 @@ export function fmtTotal(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return String(n);
+}
+
+export function fmtPct(n: number): string {
+  const sign = n > 0 ? "+" : n < 0 ? "−" : "";
+  return `${sign}${Math.abs(n).toFixed(1)}%`;
 }
