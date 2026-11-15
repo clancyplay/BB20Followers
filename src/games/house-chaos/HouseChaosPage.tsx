@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CONTESTANTS, avatarUrl } from "../../data";
 import HouseCanvas from "./HouseCanvas";
 import { HouseSocket } from "./net";
+import { SmoothWorld } from "./smooth";
 import type { GameMap, GameState, HudSnap } from "./types";
 
 const ACTIVE = CONTESTANTS.filter((c) => c.status === "active");
@@ -15,7 +16,7 @@ export default function HouseChaosPage() {
   const [error, setError] = useState<string | null>(null);
   const [hud, setHud] = useState<HudSnap | null>(null);
   const sock = useRef<HouseSocket | null>(null);
-  const stateRef = useRef<GameState | null>(null);
+  const worldRef = useRef(new SmoothWorld());
   const selfIdRef = useRef<string | null>(null);
   const hudTimer = useRef(0);
 
@@ -51,7 +52,7 @@ export default function HouseChaosPage() {
     setMap(null);
     setSelfId(null);
     setHud(null);
-    stateRef.current = null;
+    worldRef.current = new SmoothWorld();
     sock.current?.close();
 
     const s = new HouseSocket({
@@ -59,11 +60,11 @@ export default function HouseChaosPage() {
         selfIdRef.current = msg.id;
         setSelfId(msg.id);
         setMap(msg.map);
-        stateRef.current = msg.state;
+        worldRef.current.push(msg.state);
         pushHud(msg.state, msg.id);
       },
       onState: (st) => {
-        stateRef.current = st;
+        worldRef.current.push(st);
         const now = performance.now();
         if (now - hudTimer.current > 250) {
           hudTimer.current = now;
@@ -100,7 +101,7 @@ export default function HouseChaosPage() {
     setSelfId(null);
     selfIdRef.current = null;
     setHud(null);
-    stateRef.current = null;
+    worldRef.current = new SmoothWorld();
   }
 
   if (playing) {
@@ -118,13 +119,15 @@ export default function HouseChaosPage() {
             <span>Score {hud?.score ?? 0}</span>
             <span>{hud?.online ?? 0} online</span>
             {hud?.buff ? <span className="ghar-buff">{hud.buff}</span> : null}
-            {hud && !hud.alive ? <span className="ghar-buff">Respawning…</span> : null}
+            {hud && !hud.alive ? (
+              <span className="ghar-buff">Respawning…</span>
+            ) : null}
           </div>
         </div>
         {error ? <p className="game-msg ghar-err">{error}</p> : null}
         <HouseCanvas
           map={map}
-          stateRef={stateRef}
+          worldRef={worldRef}
           selfId={selfId}
           onMove={onMove}
           onAttack={onAttack}

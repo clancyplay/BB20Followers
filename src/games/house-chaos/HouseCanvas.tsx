@@ -4,19 +4,20 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { bakeMapLayer } from "./bakeMap";
 import {
   drawEnemyCharacter,
   drawPickup,
   drawPlayerCharacter,
   preloadAvatar,
 } from "./drawCharacters";
-import { drawHouseBackground, drawProp, drawWalls } from "./drawFurniture";
-import type { GameMap, GameState } from "./types";
+import type { SmoothWorld } from "./smooth";
+import { loadGharSprites } from "./sprites";
+import type { GameMap } from "./types";
 
 type Props = {
   map: GameMap | null;
-  /** Latest state lives here — updated without React re-renders. */
-  stateRef: MutableRefObject<GameState | null>;
+  worldRef: MutableRefObject<SmoothWorld>;
   selfId: string | null;
   onMove: (dx: number, dy: number) => void;
   onAttack: () => void;
@@ -24,7 +25,7 @@ type Props = {
 
 export default function HouseCanvas({
   map,
-  stateRef,
+  worldRef,
   selfId,
   onMove,
   onAttack,
@@ -36,10 +37,30 @@ export default function HouseCanvas({
   const selfRef = useRef(selfId);
   const onMoveRef = useRef(onMove);
   const onAttackRef = useRef(onAttack);
+  const layerRef = useRef<HTMLCanvasElement | null>(null);
+  const readyRef = useRef(false);
   mapRef.current = map;
   selfRef.current = selfId;
   onMoveRef.current = onMove;
   onAttackRef.current = onAttack;
+
+  useEffect(() => {
+    let cancelled = false;
+    readyRef.current = false;
+    layerRef.current = null;
+    if (!map) return;
+
+    (async () => {
+      await loadGharSprites();
+      if (cancelled || !mapRef.current) return;
+      layerRef.current = bakeMapLayer(mapRef.current);
+      readyRef.current = true;
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [map]);
 
   useEffect(() => {
     function syncMove() {
@@ -91,7 +112,6 @@ export default function HouseCanvas({
     let lastDpr = 0;
 
     const draw = () => {
-      const s = stateRef.current;
       const m = mapRef.current;
       const me = selfRef.current;
       const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -105,29 +125,30 @@ export default function HouseCanvas({
         canvas.width = Math.floor(cssW * dpr);
         canvas.height = Math.floor(cssH * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.imageSmoothingEnabled = true;
       }
 
       ctx.fillStyle = "#0a0710";
       ctx.fillRect(0, 0, cssW, cssH);
 
-      if (!s || !m) {
+      if (!m || !readyRef.current || !layerRef.current) {
         ctx.fillStyle = "#a89878";
         ctx.font = "14px Sora, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("Connecting…", cssW / 2, cssH / 2);
+        ctx.fillText("Loading Ghar…", cssW / 2, cssH / 2);
         raf = requestAnimationFrame(draw);
         return;
       }
 
-      const self = s.players.find((p) => p.id === me);
-      const camX = self?.x ?? m.w / 2;
-      const camY = self?.y ?? m.h / 2;
-      // Zoomed in so 2× rooms feel big on phone/desktop
+      const view = worldRef.current.view();
+      const self = view.players.find((p) => p.id === me);
+      const camX = self?.drawX ?? m.w / 2;
+      const camY = self?.drawY ?? m.h / 2;
       const scale = Math.min(cssW / 640, cssH / 460, 1.2);
       const ox = cssW / 2 - camX * scale;
       const oy = cssH / 2 - camY * scale;
 
-      for (const p of s.players) {
+      for (const p of view.players) {
         if (p.avatarId) preloadAvatar(p.avatarId);
       }
 
@@ -135,37 +156,27 @@ export default function HouseCanvas({
       ctx.translate(ox, oy);
       ctx.scale(scale, scale);
 
-      drawHouseBackground(ctx, m.w, m.h, m.zones);
+      // One blit for the whole static house
+      ctx.drawImage(layerRef.current, 0, 0, m.w, m.h);
 
-      const props = m.props || [];
-      for (const p of props) {
-        if (!p.solid) drawProp(ctx, p);
-      }
-      for (const p of props) {
-        if (p.solid) drawProp(ctx, p);
-      }
-
-      drawWalls(ctx, m.walls);
-
-      for (const it of s.items) {
+      for (const it of view.items) {
         drawPickup(ctx, it.x, it.y, it.kind);
       }
 
-      for (const e of s.enemies) {
+      for (const e of view.enemies) {
         drawEnemyCharacter(ctx, {
-          x: e.x,
-          y: e.y,
-          label: e.label,
+          x: e.drawX,
+          y: e.drawY,
           color: e.color,
           kind: e.kind,
           hp: e.hp,
         });
       }
 
-      for (const p of s.players) {
+      for (const p of view.players) {
         drawPlayerCharacter(ctx, {
-          x: p.x,
-          y: p.y,
+          x: p.drawX,
+          y: p.drawY,
           avatarId: p.avatarId,
           isSelf: p.id === me,
           bot: p.bot,
@@ -182,7 +193,7 @@ export default function HouseCanvas({
 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [stateRef]);
+  }, [worldRef]);
 
   function stickFromEvent(e: ReactPointerEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -232,7 +243,7 @@ export default function HouseCanvas({
   return (
     <div className="house-stage">
       <canvas ref={canvasRef} className="house-canvas" />
-      <div className="house-touch" aria-hidden="false">
+      <div className="house-touch">
         <div
           className="joy-base"
           onPointerDown={onStickStart}
