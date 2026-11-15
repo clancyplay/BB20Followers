@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { createReadStream, existsSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { attachHouseRoom } from "./server/house-room.mjs";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const DIST = join(__dirname, "dist");
@@ -207,6 +208,8 @@ if (!existsSync(DIST)) {
   console.error("Missing dist/. Run npm run build first.");
   process.exit(1);
 }
+
+attachHouseRoom(server);
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`BB20Followers listening on :${PORT}`);

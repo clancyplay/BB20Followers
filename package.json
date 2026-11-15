@@ -8,6 +8,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:game": "node game-dev.mjs",
     "build": "tsc -b && vite build",
     "start": "node server.mjs",
     "lint": "oxlint",
@@ -17,12 +18,14 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
-    "recharts": "^3.10.1"
+    "recharts": "^3.10.1",
+    "ws": "^8.23.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^6.1.2",
     "oxlint": "^1.90.0",
     "typescript": "~7.0.2",

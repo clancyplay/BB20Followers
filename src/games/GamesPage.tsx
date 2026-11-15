@@ -5,10 +5,20 @@ import CaptaincyRace from "./CaptaincyRace";
 import MemoryMatch from "./MemoryMatch";
 import SecretRoom from "./SecretRoom";
 import ChaosQuiz from "./ChaosQuiz";
+import HouseChaosPage from "./house-chaos/HouseChaosPage";
 import "../App.css";
 import "./games.css";
 
 const GAMES = [
+  {
+    id: "house-chaos",
+    title: "Game-Ghar · House Chaos",
+    kind: "Main",
+    blurb:
+      "Top-down multiplayer house. Collect power, silence bosses, evict rivals.",
+    emoji: "🏠",
+    tone: "adventure",
+  },
   {
     id: "love-hate",
     title: "Pyar vs Hate",
@@ -100,6 +110,8 @@ function GamesHub() {
 function GameRouter() {
   const { gameId } = useParams();
   switch (gameId) {
+    case "house-chaos":
+      return <HouseChaosPage />;
     case "love-hate":
       return <LoveHateGame />;
     case "captaincy":

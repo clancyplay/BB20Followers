@@ -1047,6 +1047,58 @@ tbody tr:hover {
   color: var(--muted);
 }
 
+/* —— Game-Ghar enter strip (under broadcast) —— */
+.game-ghar-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 10px 0 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 107, 53, 0.45);
+  background: linear-gradient(
+    100deg,
+    rgba(255, 107, 53, 0.16),
+    rgba(232, 197, 71, 0.1),
+    rgba(123, 44, 191, 0.12)
+  );
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.game-ghar-strip:hover {
+  border-color: rgba(232, 197, 71, 0.65);
+  transform: translateY(-1px);
+}
+
+.gg-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.gg-copy {
+  flex: 1;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.gg-cta {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a1204;
+  background: linear-gradient(135deg, #e8c547, #ff6b35);
+  border-radius: 999px;
+  padding: 6px 12px;
+}
+
 /* —— Broadcast bar (timer / teaser / news / stream) —— */
 .broadcast {
   margin: 16px 0 8px;

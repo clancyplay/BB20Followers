@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Bar,
@@ -220,10 +220,13 @@ export default function App() {
     return asc ? " ↑" : " ↓";
   }
 
-  async function onRefresh() {
-    if (refreshing) return;
+  const refreshingRef = useRef(false);
+
+  async function onRefresh(opts?: { quiet?: boolean }) {
+    if (refreshingRef.current) return;
+    refreshingRef.current = true;
     setRefreshing(true);
-    setRefreshMsg(null);
+    if (!opts?.quiet) setRefreshMsg(null);
     try {
       const result = await refreshFromKoyro();
       setContestants(result.contestants);
@@ -233,9 +236,32 @@ export default function App() {
       const msg = err instanceof Error ? err.message : "Refresh failed";
       setRefreshMsg(msg);
     } finally {
+      refreshingRef.current = false;
       setRefreshing(false);
     }
   }
+
+  useEffect(() => {
+    const AUTO_MS = 5 * 60 * 1000;
+    void onRefresh({ quiet: true });
+
+    const id = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void onRefresh({ quiet: true });
+      }
+    }, AUTO_MS);
+
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        void onRefresh({ quiet: true });
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
 
   return (
     <div className="page">
@@ -247,6 +273,16 @@ export default function App() {
       </div>
 
       <BroadcastBar />
+
+      <Link className="game-ghar-strip" to="/games/house-chaos">
+        <span className="gg-live">
+          <span className="live-dot" /> Game-Ghar open
+        </span>
+        <span className="gg-copy">
+          Enter the house · collect power · silence bosses · evict rivals
+        </span>
+        <span className="gg-cta">Enter →</span>
+      </Link>
 
       <header className="hero">
         <div className="hero-brand">
@@ -272,7 +308,7 @@ export default function App() {
             <button
               type="button"
               className={`icon-btn refresh ${refreshing ? "spinning" : ""}`}
-              onClick={onRefresh}
+              onClick={() => void onRefresh()}
               disabled={refreshing}
               title={refreshing ? "Refreshing…" : "Refresh live data"}
               aria-label={refreshing ? "Refreshing…" : "Refresh live data"}
