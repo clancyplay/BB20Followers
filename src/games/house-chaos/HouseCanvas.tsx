@@ -4,6 +4,12 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import {
+  drawEnemyCharacter,
+  drawPickup,
+  drawPlayerCharacter,
+  preloadAvatar,
+} from "./drawCharacters";
 import { drawHouseBackground, drawProp, drawWalls } from "./drawFurniture";
 import type { GameMap, GameState } from "./types";
 
@@ -14,14 +20,6 @@ type Props = {
   selfId: string | null;
   onMove: (dx: number, dy: number) => void;
   onAttack: () => void;
-};
-
-const ITEM_COLOR: Record<string, string> = {
-  maggi: "#f5d76e",
-  tomato: "#e63946",
-  mic: "#7b2cbf",
-  luxury: "#2ec4b6",
-  captain: "#e8c547",
 };
 
 export default function HouseCanvas({
@@ -124,9 +122,14 @@ export default function HouseCanvas({
       const self = s.players.find((p) => p.id === me);
       const camX = self?.x ?? m.w / 2;
       const camY = self?.y ?? m.h / 2;
-      const scale = Math.min(cssW / 520, cssH / 380, 1.35);
+      // Zoomed in so 2× rooms feel big on phone/desktop
+      const scale = Math.min(cssW / 640, cssH / 460, 1.2);
       const ox = cssW / 2 - camX * scale;
       const oy = cssH / 2 - camY * scale;
+
+      for (const p of s.players) {
+        if (p.avatarId) preloadAvatar(p.avatarId);
+      }
 
       ctx.save();
       ctx.translate(ox, oy);
@@ -134,7 +137,6 @@ export default function HouseCanvas({
 
       drawHouseBackground(ctx, m.w, m.h, m.zones);
 
-      // Soft props first (carpets, mess), then solids
       const props = m.props || [];
       for (const p of props) {
         if (!p.solid) drawProp(ctx, p);
@@ -146,46 +148,32 @@ export default function HouseCanvas({
       drawWalls(ctx, m.walls);
 
       for (const it of s.items) {
-        ctx.beginPath();
-        ctx.fillStyle = ITEM_COLOR[it.kind] || "#e8c547";
-        ctx.arc(it.x, it.y, 11, 0, Math.PI * 2);
-        ctx.fill();
+        drawPickup(ctx, it.x, it.y, it.kind);
       }
 
       for (const e of s.enemies) {
-        ctx.fillStyle = e.color;
-        ctx.fillRect(e.x - 14, e.y - 14, 28, 28);
-        ctx.fillStyle = "#0a0810";
-        ctx.font = "bold 9px Sora, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(e.label.slice(0, 5), e.x, e.y + 3);
-        drawHp(ctx, e.x, e.y - 20, e.hp, 5);
+        drawEnemyCharacter(ctx, {
+          x: e.x,
+          y: e.y,
+          label: e.label,
+          color: e.color,
+          kind: e.kind,
+          hp: e.hp,
+        });
       }
 
       for (const p of s.players) {
-        const isSelf = p.id === me;
-        ctx.globalAlpha = p.alive ? 1 : 0.3;
-        ctx.beginPath();
-        ctx.fillStyle = p.attacking
-          ? "#ff6b35"
-          : isSelf
-            ? "#e8c547"
-            : p.bot
-              ? "#8899aa"
-              : "#1e90ff";
-        ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
-        ctx.fill();
-        if (isSelf) {
-          ctx.strokeStyle = "#fff6c8";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        ctx.fillStyle = "#f7f0dd";
-        ctx.font = "bold 11px Sora, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(p.name.split(/[\s-]/)[0].slice(0, 8), p.x, p.y - 20);
-        drawHp(ctx, p.x, p.y - 30, p.hp, p.maxHp);
-        ctx.globalAlpha = 1;
+        drawPlayerCharacter(ctx, {
+          x: p.x,
+          y: p.y,
+          avatarId: p.avatarId,
+          isSelf: p.id === me,
+          bot: p.bot,
+          attacking: p.attacking,
+          alive: p.alive,
+          hp: p.hp,
+          maxHp: p.maxHp,
+        });
       }
 
       ctx.restore();
@@ -267,18 +255,4 @@ export default function HouseCanvas({
       </div>
     </div>
   );
-}
-
-function drawHp(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  hp: number,
-  max: number
-) {
-  const w = 26;
-  ctx.fillStyle = "rgba(0,0,0,0.5)";
-  ctx.fillRect(x - w / 2, y, w, 3);
-  ctx.fillStyle = "#2ec4b6";
-  ctx.fillRect(x - w / 2, y, w * Math.max(0, hp / Math.max(1, max)), 3);
 }

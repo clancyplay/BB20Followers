@@ -13,24 +13,24 @@ const TICK_MS = 50; // 20 Hz sim
 const BROADCAST_MS = 50; // 20 Hz lean snapshots
 const MAX_PLAYERS = 20;
 const TARGET_POP = 6;
-const PLAYER_R = 16;
-const ENEMY_R = 18;
-const ITEM_R = 12;
-const ATTACK_RANGE = 42;
+const PLAYER_R = 22;
+const ENEMY_R = 24;
+const ITEM_R = 18;
+const ATTACK_RANGE = 55;
 const ATTACK_CD = 450;
 const RESPAWN_MS = 3000;
-const BOT_NAMES = [
-  "Arishfa",
-  "Kanika",
-  "Amrapali",
-  "Scout",
-  "Yung",
-  "Mahhi",
-  "Touqeer",
-  "Gullu",
-  "Uditi",
-  "LoveGill",
-  "Manish",
+const BOT_ROSTER = [
+  { name: "Arishfa", avatarId: "34e2df4c-7fe5-4fc7-9e94-6d04a5254adc" },
+  { name: "Kanika", avatarId: "d4c3e6b4-185f-480d-b081-b10a84e43995" },
+  { name: "Amrapali", avatarId: "80635d97-8263-4b77-a2c6-e83cf99f19f6" },
+  { name: "Scout", avatarId: "4dff4fda-6782-4e5b-9b5f-62d504d3cf8d" },
+  { name: "Yung", avatarId: "06ea68d9-40d7-49d2-9f90-68c027f0af45" },
+  { name: "Mahhi", avatarId: "478eded1-5842-47dd-822c-1c65e96a4a58" },
+  { name: "Touqeer", avatarId: "9ce14673-39bd-4298-83e4-7b4b77d159ac" },
+  { name: "Gullu", avatarId: "7dd1ac26-1570-4818-a940-0f96c9ab55bc" },
+  { name: "Uditi", avatarId: "fb7e0234-c523-4b0d-b2a3-9b73a2e872a3" },
+  { name: "LoveGill", avatarId: "a85ca3b3-602d-4d2b-818c-d1b12c82b382" },
+  { name: "Manish", avatarId: "d5fdecfb-d304-4e27-b0be-f3dc5a4d39fe" },
 ];
 
 const ITEM_KINDS = [
@@ -199,14 +199,14 @@ function ensureBots(room) {
   const need = Math.max(0, TARGET_POP - humans - room.bots.size);
   for (let i = 0; i < need; i++) {
     const id = `bot-${randomUUID().slice(0, 6)}`;
-    const name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+    const roster = BOT_ROSTER[Math.floor(Math.random() * BOT_ROSTER.length)];
     const p = safeSpawn();
     room.bots.set(id, {
       id,
       bot: true,
-      name: `${name}-bot`,
+      name: roster.name,
       handle: `@bot_${id.slice(-4)}`,
-      avatarId: "",
+      avatarId: roster.avatarId,
       x: p.x,
       y: p.y,
       hp: 3,

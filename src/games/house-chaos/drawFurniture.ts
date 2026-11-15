@@ -45,12 +45,12 @@ export function drawHouseBackground(
     ctx.globalAlpha = 1;
 
     // Label plate
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.fillRect(z.x + 10, z.y + 10, 118, 22);
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(z.x + 16, z.y + 16, 168, 30);
     ctx.fillStyle = z.color;
-    ctx.font = "bold 12px Sora, sans-serif";
+    ctx.font = "bold 16px Sora, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(ZONE_LABEL[z.id] || z.id, z.x + 16, z.y + 25);
+    ctx.fillText(ZONE_LABEL[z.id] || z.id, z.x + 24, z.y + 36);
   }
 }
 
