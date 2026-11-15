@@ -17,6 +17,7 @@ export class HouseSocket {
   private handlers: HouseSocketHandlers;
   private inputTimer: number | null = null;
   private pending = { dx: 0, dy: 0, attack: false };
+  private lastSent = { dx: 0, dy: 0 };
 
   constructor(handlers: HouseSocketHandlers) {
     this.handlers = handlers;
@@ -33,7 +34,7 @@ export class HouseSocket {
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: "join", ...join }));
-      this.inputTimer = window.setInterval(() => this.flushInput(), 50);
+      this.inputTimer = window.setInterval(() => this.flushInput(), 33);
     };
 
     ws.onmessage = (ev) => {
@@ -54,9 +55,7 @@ export class HouseSocket {
     };
 
     ws.onerror = () => {
-      this.handlers.onError(
-        "Could not connect to Game-Ghar. Is the game server running?"
-      );
+      this.handlers.onError("Ghar se connect nahi hua. Page refresh karke try karo.");
     };
   }
 
@@ -72,6 +71,12 @@ export class HouseSocket {
   private flushInput() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const { dx, dy, attack } = this.pending;
+    const moved =
+      Math.abs(dx - this.lastSent.dx) > 0.02 ||
+      Math.abs(dy - this.lastSent.dy) > 0.02;
+    if (!moved && !attack) return;
+    this.lastSent.dx = dx;
+    this.lastSent.dy = dy;
     this.pending.attack = false;
     this.ws.send(JSON.stringify({ type: "input", dx, dy, attack }));
   }

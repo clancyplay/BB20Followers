@@ -8,13 +8,13 @@ Built for [**@bigbossgossipverse**](https://www.instagram.com/bigbossgossipverse
 
 ```bash
 npm install
-npm run dev:game   # terminal 1 — House Chaos WebSocket (:8787)
+npm run dev:game   # terminal 1 — Ghar WebSocket (:8787)
 npm run dev        # terminal 2 — Vite UI
 ```
 
 Open the URL Vite prints (usually `http://localhost:5173`).
 
-Production-style (static + KOYRO proxy + Game-Ghar WS):
+Production-style (static + KOYRO proxy + Ghar WS):
 
 ```bash
 npm run build
@@ -25,7 +25,7 @@ npm start
 
 - Sort by today / week / 30 days / since entry / total / name
 - Auto-refresh KOYRO on open (+ every 5 min while tab visible)
-- **Game-Ghar · House Chaos** — multiplayer top-down house arena
+- **Ghar** — fullscreen multiplayer house arena (touch + keyboard)
 - Mini-games arena (`/games`), Hotstar stream / vote links
 - Contestant avatars, BB20 logo / eye motif, gold + multicolor iris theme
 - Links to Instagram

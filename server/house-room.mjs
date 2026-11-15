@@ -1,10 +1,10 @@
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
 
-const TICK_MS = 66; // ~15 Hz
-const BROADCAST_MS = 80;
+const TICK_MS = 50; // 20 Hz sim
+const BROADCAST_MS = 50; // 20 Hz lean snapshots
 const MAX_PLAYERS = 20;
-const TARGET_POP = 8;
+const TARGET_POP = 6;
 const WORLD_W = 1600;
 const WORLD_H = 1100;
 const PLAYER_R = 16;
@@ -155,6 +155,7 @@ function publicPlayer(p) {
   };
 }
 
+/** Lean per-tick payload — map geometry only sent on welcome. */
 function snapshot(room) {
   const players = [...room.players.values(), ...room.bots.values()].map(
     publicPlayer
@@ -162,9 +163,6 @@ function snapshot(room) {
   return {
     type: "state",
     t: Date.now(),
-    world: { w: WORLD_W, h: WORLD_H },
-    zones: ZONES,
-    walls: WALLS,
     players,
     enemies: room.enemies.map((e) => ({
       id: e.id,
@@ -178,7 +176,6 @@ function snapshot(room) {
     items: room.items.map((it) => ({
       id: it.id,
       kind: it.kind,
-      label: it.label,
       x: Math.round(it.x),
       y: Math.round(it.y),
     })),

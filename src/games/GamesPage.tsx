@@ -12,10 +12,9 @@ import "./games.css";
 const GAMES = [
   {
     id: "house-chaos",
-    title: "Game-Ghar · House Chaos",
+    title: "Ghar",
     kind: "Main",
-    blurb:
-      "Top-down multiplayer house. Collect power, silence bosses, evict rivals.",
+    blurb: "Live house arena — collect, fight bosses, hit rivals.",
     emoji: "🏠",
     tone: "adventure",
   },

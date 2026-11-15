@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { CONTESTANTS, avatarUrl } from "../../data";
 import HouseCanvas from "./HouseCanvas";
 import { HouseSocket } from "./net";
-import type { GameState } from "./types";
+import type { GameMap, GameState, HudSnap } from "./types";
 
 const ACTIVE = CONTESTANTS.filter((c) => c.status === "active");
 
@@ -11,43 +11,74 @@ export default function HouseChaosPage() {
   const [picked, setPicked] = useState<(typeof ACTIVE)[0] | null>(null);
   const [playing, setPlaying] = useState(false);
   const [selfId, setSelfId] = useState<string | null>(null);
-  const [state, setState] = useState<GameState | null>(null);
+  const [map, setMap] = useState<GameMap | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hud, setHud] = useState<HudSnap | null>(null);
   const sock = useRef<HouseSocket | null>(null);
-
-  const me = useMemo(
-    () => state?.players.find((p) => p.id === selfId) ?? null,
-    [state, selfId]
-  );
+  const stateRef = useRef<GameState | null>(null);
+  const selfIdRef = useRef<string | null>(null);
+  const hudTimer = useRef(0);
 
   useEffect(() => {
-    return () => sock.current?.close();
+    return () => {
+      sock.current?.close();
+      document.body.classList.remove("ghar-playing");
+    };
   }, []);
+
+  useEffect(() => {
+    if (playing) document.body.classList.add("ghar-playing");
+    else document.body.classList.remove("ghar-playing");
+  }, [playing]);
+
+  function pushHud(s: GameState, id: string | null) {
+    const me = s.players.find((p) => p.id === id);
+    setHud({
+      hp: me?.hp ?? 0,
+      maxHp: me?.maxHp ?? 3,
+      score: me?.score ?? 0,
+      buff: me?.buff ?? null,
+      online: s.online,
+      inHouse: s.players.length,
+      alive: me?.alive ?? true,
+    });
+  }
 
   function enter() {
     if (!picked) return;
     setError(null);
     setPlaying(true);
-    setState(null);
+    setMap(null);
     setSelfId(null);
+    setHud(null);
+    stateRef.current = null;
     sock.current?.close();
+
     const s = new HouseSocket({
       onWelcome: (msg) => {
+        selfIdRef.current = msg.id;
         setSelfId(msg.id);
-        setState(msg.state);
+        setMap(msg.map);
+        stateRef.current = msg.state;
+        pushHud(msg.state, msg.id);
       },
-      onState: setState,
+      onState: (st) => {
+        stateRef.current = st;
+        const now = performance.now();
+        if (now - hudTimer.current > 250) {
+          hudTimer.current = now;
+          pushHud(st, selfIdRef.current);
+        }
+      },
       onError: (m) => {
         setError(m);
         setPlaying(false);
       },
-      onClose: () => {
-        /* keep last frame; user can re-enter */
-      },
+      onClose: () => {},
     });
     sock.current = s;
     s.connect({
-      name: picked.name,
+      name: picked.name.split(" ")[0],
       handle: picked.handle,
       avatarId: picked.avatarId,
     });
@@ -65,8 +96,41 @@ export default function HouseChaosPage() {
     sock.current?.close();
     sock.current = null;
     setPlaying(false);
-    setState(null);
+    setMap(null);
     setSelfId(null);
+    selfIdRef.current = null;
+    setHud(null);
+    stateRef.current = null;
+  }
+
+  if (playing) {
+    return (
+      <div className="ghar-fs">
+        <div className="ghar-topbar">
+          <button type="button" className="ghar-leave" onClick={leave}>
+            ← Exit
+          </button>
+          <div className="ghar-stats">
+            <strong>{picked?.name.split(" ")[0]}</strong>
+            <span>
+              HP {hud?.hp ?? "–"}/{hud?.maxHp ?? 3}
+            </span>
+            <span>Score {hud?.score ?? 0}</span>
+            <span>{hud?.online ?? 0} online</span>
+            {hud?.buff ? <span className="ghar-buff">{hud.buff}</span> : null}
+            {hud && !hud.alive ? <span className="ghar-buff">Respawning…</span> : null}
+          </div>
+        </div>
+        {error ? <p className="game-msg ghar-err">{error}</p> : null}
+        <HouseCanvas
+          map={map}
+          stateRef={stateRef}
+          selfId={selfId}
+          onMove={onMove}
+          onAttack={onAttack}
+        />
+      </div>
+    );
   }
 
   return (
@@ -74,78 +138,37 @@ export default function HouseChaosPage() {
       <Link className="back-link" to="/games">
         ← All games
       </Link>
-
-      {!playing ? (
-        <>
-          <header className="game-head">
-            <p className="eyebrow">Main game · Multiplayer</p>
-            <h1>Game-Ghar · House Chaos</h1>
-            <p>
-              Apna contestant choose karo, ghar mein ghus o — items collect karo,
-              Bigg Boss / Salman / editors ko silence karo, aur dusre players ko
-              evict karo. Alone ho to bots bhar denge.
-            </p>
-          </header>
-          {error ? <p className="game-msg">{error}</p> : null}
-          <div className="vibe-grid house-pick">
-            {ACTIVE.map((c) => (
-              <button
-                key={c.handle}
-                type="button"
-                className={`vibe-card ${picked?.handle === c.handle ? "selected love" : ""}`}
-                onClick={() => setPicked(c)}
-              >
-                <img src={avatarUrl(c.avatarId)} alt="" />
-                <strong>{c.name}</strong>
-                <span className="handle">{c.handle}</span>
-              </button>
-            ))}
-          </div>
+      <header className="game-head">
+        <p className="eyebrow">Multiplayer</p>
+        <h1>Ghar</h1>
+        <p>
+          Contestant choose karo → ghar mein ghus o. Items lo, bosses hatao,
+          rivals ko hit karo.
+        </p>
+      </header>
+      {error ? <p className="game-msg">{error}</p> : null}
+      <div className="vibe-grid house-pick">
+        {ACTIVE.map((c) => (
           <button
+            key={c.handle}
             type="button"
-            className="stream-btn"
-            disabled={!picked}
-            onClick={enter}
-            style={{ marginTop: 16 }}
+            className={`vibe-card ${picked?.handle === c.handle ? "selected love" : ""}`}
+            onClick={() => setPicked(c)}
           >
-            Enter Game-Ghar
+            <img src={avatarUrl(c.avatarId)} alt="" />
+            <strong>{c.name.split(" ")[0]}</strong>
           </button>
-        </>
-      ) : (
-        <>
-          <div className="house-hud">
-            <div>
-              <strong>{picked?.name}</strong>
-              <span className="muted">
-                {" "}
-                · HP {me?.hp ?? "–"}/{me?.maxHp ?? 3}
-                {me?.buff ? ` · ${me.buff}` : ""}
-              </span>
-            </div>
-            <div>
-              Score <strong>{me?.score ?? 0}</strong>
-              <span className="muted">
-                {" "}
-                · Online {state?.online ?? 0}
-                {state ? ` · ${state.players.length} in house` : ""}
-              </span>
-            </div>
-            <button type="button" className="pill ghost" onClick={leave}>
-              Leave
-            </button>
-          </div>
-          {error ? <p className="game-msg">{error}</p> : null}
-          <HouseCanvas
-            state={state}
-            selfId={selfId}
-            onMove={onMove}
-            onAttack={onAttack}
-          />
-          <p className="house-help">
-            Move: WASD / arrows · Attack: Space or J · Mobile: stick + Evict
-          </p>
-        </>
-      )}
+        ))}
+      </div>
+      <button
+        type="button"
+        className="stream-btn"
+        disabled={!picked}
+        onClick={enter}
+        style={{ marginTop: 16 }}
+      >
+        Play Ghar
+      </button>
     </div>
   );
 }

@@ -1,35 +1,55 @@
-import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from "react";
-import type { GameState, Zone } from "./types";
+import {
+  useEffect,
+  useRef,
+  type MutableRefObject,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import type { GameMap, GameState, Zone } from "./types";
 
 type Props = {
-  state: GameState | null;
+  map: GameMap | null;
+  /** Latest state lives here — updated without React re-renders. */
+  stateRef: MutableRefObject<GameState | null>;
   selfId: string | null;
   onMove: (dx: number, dy: number) => void;
   onAttack: () => void;
 };
 
 const ZONE_LABEL: Record<string, string> = {
-  living: "Living Room",
+  living: "Living",
   kitchen: "Kitchen",
   garden: "Garden",
-  confession: "Confession",
+  confession: "Confess",
   bedroom: "Bedroom",
-  secret: "Secret Room",
+  secret: "Secret",
+};
+
+const ITEM_COLOR: Record<string, string> = {
+  maggi: "#f5d76e",
+  tomato: "#e63946",
+  mic: "#7b2cbf",
+  luxury: "#2ec4b6",
+  captain: "#e8c547",
 };
 
 export default function HouseCanvas({
-  state,
+  map,
+  stateRef,
   selfId,
   onMove,
   onAttack,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const keys = useRef(new Set<string>());
-  const joy = useRef({ active: false, dx: 0, dy: 0 });
-  const stateRef = useRef(state);
+  const joy = useRef({ active: false, dx: 0, dy: 0, pointerId: -1 });
+  const mapRef = useRef(map);
   const selfRef = useRef(selfId);
-  stateRef.current = state;
+  const onMoveRef = useRef(onMove);
+  const onAttackRef = useRef(onAttack);
+  mapRef.current = map;
   selfRef.current = selfId;
+  onMoveRef.current = onMove;
+  onAttackRef.current = onAttack;
 
   useEffect(() => {
     function syncMove() {
@@ -43,7 +63,7 @@ export default function HouseCanvas({
         dx = joy.current.dx;
         dy = joy.current.dy;
       }
-      onMove(dx, dy);
+      onMoveRef.current(dx, dy);
     }
 
     function onKeyDown(e: KeyboardEvent) {
@@ -51,7 +71,7 @@ export default function HouseCanvas({
       keys.current.add(k);
       if (k === " " || k === "j") {
         e.preventDefault();
-        onAttack();
+        onAttackRef.current();
       }
       syncMove();
     }
@@ -61,49 +81,58 @@ export default function HouseCanvas({
     }
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-    const id = window.setInterval(syncMove, 50);
+    const id = window.setInterval(syncMove, 33);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.clearInterval(id);
     };
-  }, [onMove, onAttack]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
     let raf = 0;
+    let lastW = 0;
+    let lastH = 0;
+    let lastDpr = 0;
+
     const draw = () => {
       const s = stateRef.current;
+      const m = mapRef.current;
       const me = selfRef.current;
-      const dpr = window.devicePixelRatio || 1;
-      const cssW = canvas.clientWidth;
-      const cssH = canvas.clientHeight;
-      if (canvas.width !== Math.floor(cssW * dpr)) {
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const cssW = canvas.clientWidth || 1;
+      const cssH = canvas.clientHeight || 1;
+
+      if (cssW !== lastW || cssH !== lastH || dpr !== lastDpr) {
+        lastW = cssW;
+        lastH = cssH;
+        lastDpr = dpr;
         canvas.width = Math.floor(cssW * dpr);
         canvas.height = Math.floor(cssH * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, cssW, cssH);
+
       ctx.fillStyle = "#0a0710";
       ctx.fillRect(0, 0, cssW, cssH);
 
-      if (!s) {
+      if (!s || !m) {
         ctx.fillStyle = "#a89878";
         ctx.font = "14px Sora, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("Connecting to Game-Ghar…", cssW / 2, cssH / 2);
+        ctx.fillText("Connecting…", cssW / 2, cssH / 2);
         raf = requestAnimationFrame(draw);
         return;
       }
 
       const self = s.players.find((p) => p.id === me);
-      const camX = self?.x ?? s.world.w / 2;
-      const camY = self?.y ?? s.world.h / 2;
-      const scale = Math.min(cssW / 700, cssH / 500, 1.15);
+      const camX = self?.x ?? m.w / 2;
+      const camY = self?.y ?? m.h / 2;
+      const scale = Math.min(cssW / 520, cssH / 380, 1.35);
       const ox = cssW / 2 - camX * scale;
       const oy = cssH / 2 - camY * scale;
 
@@ -111,105 +140,77 @@ export default function HouseCanvas({
       ctx.translate(ox, oy);
       ctx.scale(scale, scale);
 
-      // Floor
       ctx.fillStyle = "#1a1210";
-      ctx.fillRect(0, 0, s.world.w, s.world.h);
+      ctx.fillRect(0, 0, m.w, m.h);
 
-      for (const z of s.zones as Zone[]) {
-        ctx.globalAlpha = 0.35;
+      for (const z of m.zones as Zone[]) {
+        ctx.globalAlpha = 0.32;
         ctx.fillStyle = z.color;
         ctx.fillRect(z.x, z.y, z.w, z.h);
-        ctx.globalAlpha = 0.9;
-        ctx.strokeStyle = z.color;
-        ctx.lineWidth = 3;
-        ctx.strokeRect(z.x + 2, z.y + 2, z.w - 4, z.h - 4);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = "rgba(247,240,221,0.75)";
-        ctx.font = "bold 16px Sora, sans-serif";
+        ctx.fillStyle = "rgba(247,240,221,0.55)";
+        ctx.font = "bold 14px Sora, sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(ZONE_LABEL[z.id] || z.id, z.x + 14, z.y + 28);
+        ctx.fillText(ZONE_LABEL[z.id] || z.id, z.x + 12, z.y + 24);
       }
 
       ctx.fillStyle = "#3a2a18";
-      for (const w of s.walls) {
+      for (const w of m.walls) {
         ctx.fillRect(w.x, w.y, w.w, w.h);
       }
 
-      // Items
       for (const it of s.items) {
         ctx.beginPath();
-        ctx.fillStyle =
-          it.kind === "maggi"
-            ? "#f5d76e"
-            : it.kind === "tomato"
-              ? "#e63946"
-              : it.kind === "mic"
-                ? "#7b2cbf"
-                : it.kind === "luxury"
-                  ? "#2ec4b6"
-                  : "#e8c547";
-        ctx.arc(it.x, it.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = ITEM_COLOR[it.kind] || "#e8c547";
+        ctx.arc(it.x, it.y, 11, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#0a0810";
-        ctx.font = "10px Sora, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText(it.label.slice(0, 3), it.x, it.y + 3);
       }
 
-      // Enemies
       for (const e of s.enemies) {
-        ctx.beginPath();
         ctx.fillStyle = e.color;
-        ctx.strokeStyle = "#0a0810";
-        ctx.lineWidth = 2;
-        roundRect(ctx, e.x - 16, e.y - 16, 32, 32, 6);
-        ctx.fill();
-        ctx.stroke();
+        ctx.fillRect(e.x - 14, e.y - 14, 28, 28);
         ctx.fillStyle = "#0a0810";
         ctx.font = "bold 9px Sora, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(e.label.slice(0, 6), e.x, e.y + 3);
-        drawHp(ctx, e.x, e.y - 22, e.hp, 5);
+        ctx.fillText(e.label.slice(0, 5), e.x, e.y + 3);
+        drawHp(ctx, e.x, e.y - 20, e.hp, 5);
       }
 
-      // Players
       for (const p of s.players) {
         const isSelf = p.id === me;
-        ctx.globalAlpha = p.alive ? 1 : 0.35;
+        ctx.globalAlpha = p.alive ? 1 : 0.3;
         ctx.beginPath();
-        ctx.fillStyle = isSelf ? "#e8c547" : p.bot ? "#8899aa" : "#1e90ff";
-        if (p.attacking) ctx.fillStyle = "#ff6b35";
+        ctx.fillStyle = p.attacking
+          ? "#ff6b35"
+          : isSelf
+            ? "#e8c547"
+            : p.bot
+              ? "#8899aa"
+              : "#1e90ff";
         ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = "#fff6c8";
-        ctx.lineWidth = isSelf ? 3 : 1.5;
-        ctx.stroke();
+        if (isSelf) {
+          ctx.strokeStyle = "#fff6c8";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
         ctx.fillStyle = "#f7f0dd";
         ctx.font = "bold 11px Sora, sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(p.name.split(" ")[0].slice(0, 10), p.x, p.y - 22);
-        if (p.buff) {
-          ctx.fillStyle = "#f5d76e";
-          ctx.font = "9px Sora, sans-serif";
-          ctx.fillText(p.buff, p.x, p.y + 28);
-        }
-        drawHp(ctx, p.x, p.y - 32, p.hp, p.maxHp);
+        ctx.fillText(p.name.split(/[\s-]/)[0].slice(0, 8), p.x, p.y - 20);
+        drawHp(ctx, p.x, p.y - 30, p.hp, p.maxHp);
         ctx.globalAlpha = 1;
       }
 
       ctx.restore();
       raf = requestAnimationFrame(draw);
     };
+
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [stateRef]);
 
-  function onStickStart(e: ReactPointerEvent<HTMLDivElement>) {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    joy.current.active = true;
-    updateStick(e);
-  }
-  function updateStick(e: ReactPointerEvent<HTMLDivElement>) {
+  function stickFromEvent(e: ReactPointerEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -222,13 +223,31 @@ export default function HouseCanvas({
     }
     joy.current.dx = dx;
     joy.current.dy = dy;
-    onMove(dx, dy);
+    onMoveRef.current(dx, dy);
   }
+
+  function onStickStart(e: ReactPointerEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    joy.current.active = true;
+    joy.current.pointerId = e.pointerId;
+    stickFromEvent(e);
+  }
+
+  function onStickMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!joy.current.active || e.pointerId !== joy.current.pointerId) return;
+    e.preventDefault();
+    stickFromEvent(e);
+  }
+
   function onStickEnd(e: ReactPointerEvent<HTMLDivElement>) {
+    if (e.pointerId !== joy.current.pointerId && joy.current.pointerId !== -1)
+      return;
     joy.current.active = false;
+    joy.current.pointerId = -1;
     joy.current.dx = 0;
     joy.current.dy = 0;
-    onMove(0, 0);
+    onMoveRef.current(0, 0);
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {
@@ -239,18 +258,25 @@ export default function HouseCanvas({
   return (
     <div className="house-stage">
       <canvas ref={canvasRef} className="house-canvas" />
-      <div className="house-touch">
+      <div className="house-touch" aria-hidden="false">
         <div
           className="joy-base"
           onPointerDown={onStickStart}
-          onPointerMove={(e) => joy.current.active && updateStick(e)}
+          onPointerMove={onStickMove}
           onPointerUp={onStickEnd}
           onPointerCancel={onStickEnd}
         >
-          <span>MOVE</span>
+          <span className="joy-label">MOVE</span>
         </div>
-        <button type="button" className="attack-pad" onClick={onAttack}>
-          EVICT
+        <button
+          type="button"
+          className="attack-pad"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            onAttack();
+          }}
+        >
+          HIT
         </button>
       </div>
     </div>
@@ -264,26 +290,9 @@ function drawHp(
   hp: number,
   max: number
 ) {
-  const w = 28;
-  ctx.fillStyle = "rgba(0,0,0,0.45)";
-  ctx.fillRect(x - w / 2, y, w, 4);
+  const w = 26;
+  ctx.fillStyle = "rgba(0,0,0,0.5)";
+  ctx.fillRect(x - w / 2, y, w, 3);
   ctx.fillStyle = "#2ec4b6";
-  ctx.fillRect(x - w / 2, y, w * Math.max(0, hp / Math.max(1, max)), 4);
-}
-
-function roundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  r: number
-) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+  ctx.fillRect(x - w / 2, y, w * Math.max(0, hp / Math.max(1, max)), 3);
 }

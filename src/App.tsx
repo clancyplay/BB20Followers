@@ -276,12 +276,10 @@ export default function App() {
 
       <Link className="game-ghar-strip" to="/games/house-chaos">
         <span className="gg-live">
-          <span className="live-dot" /> Game-Ghar open
+          <span className="live-dot" /> Ghar
         </span>
-        <span className="gg-copy">
-          Enter the house · collect power · silence bosses · evict rivals
-        </span>
-        <span className="gg-cta">Enter →</span>
+        <span className="gg-copy">Play live · collect · hit bosses · fight rivals</span>
+        <span className="gg-cta">Play →</span>
       </Link>
 
       <header className="hero">
