@@ -4,7 +4,8 @@ import {
   type MutableRefObject,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import type { GameMap, GameState, Zone } from "./types";
+import { drawHouseBackground, drawProp, drawWalls } from "./drawFurniture";
+import type { GameMap, GameState } from "./types";
 
 type Props = {
   map: GameMap | null;
@@ -13,15 +14,6 @@ type Props = {
   selfId: string | null;
   onMove: (dx: number, dy: number) => void;
   onAttack: () => void;
-};
-
-const ZONE_LABEL: Record<string, string> = {
-  living: "Living",
-  kitchen: "Kitchen",
-  garden: "Garden",
-  confession: "Confess",
-  bedroom: "Bedroom",
-  secret: "Secret",
 };
 
 const ITEM_COLOR: Record<string, string> = {
@@ -140,24 +132,18 @@ export default function HouseCanvas({
       ctx.translate(ox, oy);
       ctx.scale(scale, scale);
 
-      ctx.fillStyle = "#1a1210";
-      ctx.fillRect(0, 0, m.w, m.h);
+      drawHouseBackground(ctx, m.w, m.h, m.zones);
 
-      for (const z of m.zones as Zone[]) {
-        ctx.globalAlpha = 0.32;
-        ctx.fillStyle = z.color;
-        ctx.fillRect(z.x, z.y, z.w, z.h);
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = "rgba(247,240,221,0.55)";
-        ctx.font = "bold 14px Sora, sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(ZONE_LABEL[z.id] || z.id, z.x + 12, z.y + 24);
+      // Soft props first (carpets, mess), then solids
+      const props = m.props || [];
+      for (const p of props) {
+        if (!p.solid) drawProp(ctx, p);
+      }
+      for (const p of props) {
+        if (p.solid) drawProp(ctx, p);
       }
 
-      ctx.fillStyle = "#3a2a18";
-      for (const w of m.walls) {
-        ctx.fillRect(w.x, w.y, w.w, w.h);
-      }
+      drawWalls(ctx, m.walls);
 
       for (const it of s.items) {
         ctx.beginPath();

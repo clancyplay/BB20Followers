@@ -5,9 +5,20 @@ export type Zone = {
   w: number;
   h: number;
   color: string;
+  floor?: string;
 };
 
 export type Wall = { x: number; y: number; w: number; h: number };
+
+export type MapProp = {
+  id: string;
+  kind: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  solid?: boolean;
+};
 
 export type NetPlayer = {
   id: string;
@@ -48,6 +59,7 @@ export type GameMap = {
   h: number;
   zones: Zone[];
   walls: Wall[];
+  props?: MapProp[];
 };
 
 /** Lean tick — no map geometry. */

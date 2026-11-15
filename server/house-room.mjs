@@ -1,12 +1,18 @@
 import { WebSocketServer } from "ws";
 import { randomUUID } from "node:crypto";
+import {
+  WORLD_W,
+  WORLD_H,
+  ZONES,
+  WALLS,
+  PROPS,
+  SOLID_PROPS,
+} from "./house-map.mjs";
 
 const TICK_MS = 50; // 20 Hz sim
 const BROADCAST_MS = 50; // 20 Hz lean snapshots
 const MAX_PLAYERS = 20;
 const TARGET_POP = 6;
-const WORLD_W = 1600;
-const WORLD_H = 1100;
 const PLAYER_R = 16;
 const ENEMY_R = 18;
 const ITEM_R = 12;
@@ -25,34 +31,6 @@ const BOT_NAMES = [
   "Uditi",
   "LoveGill",
   "Manish",
-];
-
-/** Colored BB house zones (visual + spawn hints). */
-export const ZONES = [
-  { id: "living", x: 520, y: 320, w: 560, h: 360, color: "#c9a227" },
-  { id: "kitchen", x: 80, y: 80, w: 400, h: 320, color: "#ff6b35" },
-  { id: "garden", x: 1120, y: 80, w: 400, h: 420, color: "#2ec4b6" },
-  { id: "confession", x: 80, y: 480, w: 360, h: 280, color: "#7b2cbf" },
-  { id: "bedroom", x: 1120, y: 560, w: 400, h: 320, color: "#e63980" },
-  { id: "secret", x: 560, y: 760, w: 480, h: 220, color: "#f5d76e" },
-];
-
-/** Wall AABBs (block movement). */
-export const WALLS = [
-  // Outer
-  { x: 0, y: 0, w: WORLD_W, h: 24 },
-  { x: 0, y: WORLD_H - 24, w: WORLD_W, h: 24 },
-  { x: 0, y: 0, w: 24, h: WORLD_H },
-  { x: WORLD_W - 24, y: 0, w: 24, h: WORLD_H },
-  // Interior dividers with door gaps
-  { x: 480, y: 24, w: 24, h: 260 },
-  { x: 480, y: 420, w: 24, h: 200 },
-  { x: 1080, y: 24, w: 24, h: 200 },
-  { x: 1080, y: 400, w: 24, h: 280 },
-  { x: 24, y: 440, w: 200, h: 24 },
-  { x: 360, y: 440, w: 140, h: 24 },
-  { x: 520, y: 700, w: 180, h: 24 },
-  { x: 860, y: 700, w: 220, h: 24 },
 ];
 
 const ITEM_KINDS = [
@@ -92,6 +70,9 @@ function blocked(x, y, r) {
   if (x - r < 0 || y - r < 0 || x + r > WORLD_W || y + r > WORLD_H) return true;
   for (const w of WALLS) {
     if (circleHitsAabb(x, y, r, w)) return true;
+  }
+  for (const p of SOLID_PROPS) {
+    if (circleHitsAabb(x, y, r, p)) return true;
   }
   return false;
 }
@@ -523,7 +504,13 @@ export function attachHouseRoom(server) {
         send(ws, {
           type: "welcome",
           id,
-          map: { w: WORLD_W, h: WORLD_H, zones: ZONES, walls: WALLS },
+          map: {
+            w: WORLD_W,
+            h: WORLD_H,
+            zones: ZONES,
+            walls: WALLS,
+            props: PROPS,
+          },
           state: snapshot(room),
         });
         return;
