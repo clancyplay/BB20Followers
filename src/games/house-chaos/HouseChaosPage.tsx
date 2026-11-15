@@ -58,6 +58,16 @@ export default function HouseChaosPage() {
     const s = new HouseSocket({
       onWelcome: (msg) => {
         selfIdRef.current = msg.id;
+        worldRef.current.setLocalId(msg.id);
+        const solids = (msg.map.props || [])
+          .filter((p) => p.solid)
+          .map((p) => ({ x: p.x, y: p.y, w: p.w, h: p.h }));
+        worldRef.current.setCollision(
+          msg.map.w,
+          msg.map.h,
+          msg.map.walls,
+          solids
+        );
         setSelfId(msg.id);
         setMap(msg.map);
         worldRef.current.push(msg.state);

@@ -71,10 +71,11 @@ export class HouseSocket {
   private flushInput() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
     const { dx, dy, attack } = this.pending;
-    const moved =
-      Math.abs(dx - this.lastSent.dx) > 0.02 ||
-      Math.abs(dy - this.lastSent.dy) > 0.02;
-    if (!moved && !attack) return;
+    const moving = Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01;
+    const wasMoving =
+      Math.abs(this.lastSent.dx) > 0.01 || Math.abs(this.lastSent.dy) > 0.01;
+    // Keep streaming while moving; also send the stop packet once.
+    if (!moving && !wasMoving && !attack) return;
     this.lastSent.dx = dx;
     this.lastSent.dy = dy;
     this.pending.attack = false;

@@ -45,10 +45,19 @@ export default function HouseCanvas({
   onAttackRef.current = onAttack;
 
   useEffect(() => {
+    worldRef.current.setLocalId(selfId);
+  }, [selfId, worldRef]);
+
+  useEffect(() => {
     let cancelled = false;
     readyRef.current = false;
     layerRef.current = null;
     if (!map) return;
+
+    const solids = (map.props || [])
+      .filter((p) => p.solid)
+      .map((p) => ({ x: p.x, y: p.y, w: p.w, h: p.h }));
+    worldRef.current.setCollision(map.w, map.h, map.walls, solids);
 
     (async () => {
       await loadGharSprites();
@@ -60,7 +69,7 @@ export default function HouseCanvas({
     return () => {
       cancelled = true;
     };
-  }, [map]);
+  }, [map, worldRef]);
 
   useEffect(() => {
     function syncMove() {
@@ -74,6 +83,12 @@ export default function HouseCanvas({
         dx = joy.current.dx;
         dy = joy.current.dy;
       }
+      const len = Math.hypot(dx, dy);
+      if (len > 1) {
+        dx /= len;
+        dy /= len;
+      }
+      worldRef.current.setLocalInput(dx, dy);
       onMoveRef.current(dx, dy);
     }
 
@@ -141,12 +156,9 @@ export default function HouseCanvas({
       }
 
       const view = worldRef.current.view();
-      const self = view.players.find((p) => p.id === me);
-      const camX = self?.drawX ?? m.w / 2;
-      const camY = self?.drawY ?? m.h / 2;
       const scale = Math.min(cssW / 640, cssH / 460, 1.2);
-      const ox = cssW / 2 - camX * scale;
-      const oy = cssH / 2 - camY * scale;
+      const ox = cssW / 2 - view.camX * scale;
+      const oy = cssH / 2 - view.camY * scale;
 
       for (const p of view.players) {
         if (p.avatarId) preloadAvatar(p.avatarId);

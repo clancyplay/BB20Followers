@@ -213,7 +213,7 @@ function ensureBots(room) {
       maxHp: 3,
       score: 0,
       alive: true,
-      speed: 95,
+      speed: 180,
       dx: 0,
       dy: 0,
       attackAt: 0,
@@ -364,7 +364,7 @@ function tick(room, dt) {
     if (p.buff === "stunned" && now < p.buffUntil) {
       // frozen
     } else {
-      const speed = p.buff === "speed" ? 140 : 110;
+      const speed = p.buff === "speed" ? 290 : 220;
       if (p.dx || p.dy) resolveMove(p, p.dx, p.dy, speed, dt, PLAYER_R);
     }
     if (p.wantAttack) {
@@ -488,7 +488,7 @@ export function attachHouseRoom(server) {
           maxHp: 3,
           score: 0,
           alive: true,
-          speed: 110,
+          speed: 220,
           dx: 0,
           dy: 0,
           wantAttack: false,
